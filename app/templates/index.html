@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="search">
+  <h1>Find a recipe</h1>
+  <form id="search-form" role="search">
+    <label for="search-input" class="visually-hidden">Search recipes</label>
+    <input id="search-input" type="search" placeholder="Try chicken, pasta, or arrabiata" autocomplete="off" required>
+    <button type="submit">Search</button>
+  </form>
+  <p id="status" role="status"></p>
+</section>
+
+<section id="results" class="results" aria-live="polite"></section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

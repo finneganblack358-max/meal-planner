@@ -1,0 +1,131 @@
+:root {
+  --ink: #1d2b26;
+  --muted: #5d6b64;
+  --paper: #f4f6f1;
+  --surface: #ffffff;
+  --line: #d3dbd0;
+  --leaf: #2e6b4e;
+  --leaf-dark: #214f3a;
+  --serif: "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.5;
+}
+
+.site-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+main {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+h1 {
+  font-family: var(--serif);
+  font-size: 2.25rem;
+  margin: 0 0 1rem;
+}
+
+#search-form {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 36rem;
+}
+
+input[type="search"] {
+  flex: 1;
+  padding: 0.65rem 0.8rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+button {
+  padding: 0.65rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--leaf);
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover { background: var(--leaf-dark); }
+
+input:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+#status {
+  min-height: 1.5rem;
+  color: var(--muted);
+}
+
+.results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.recipe {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.recipe img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.recipe-body { padding: 0.75rem 1rem 1rem; }
+
+.recipe h2 {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  margin: 0 0 0.25rem;
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
