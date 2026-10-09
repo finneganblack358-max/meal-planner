@@ -1,5 +1,6 @@
 from flask import Blueprint, current_app, jsonify, render_template, request
 
+from . import db
 from .clients.themealdb import MealDBError, TheMealDBClient
 
 bp = Blueprint("main", __name__)
@@ -26,3 +27,34 @@ def search_recipes():
         return jsonify({"error": "The recipe service is unavailable. Try again in a minute."}), 502
 
     return jsonify({"results": recipes})
+
+
+@bp.route("/api/saved", methods=["GET"])
+def list_saved():
+    return jsonify({"results": db.list_saved()})
+
+
+@bp.route("/api/saved", methods=["POST"])
+def add_saved():
+    data = request.get_json(silent=True) or {}
+    meal_id = str(data.get("id", "")).strip()
+    if not meal_id:
+        return jsonify({"error": "Send the recipe id, for example {\"id\": \"52771\"}."}), 400
+
+    try:
+        recipe = get_client().get_by_id(meal_id)
+    except MealDBError:
+        return jsonify({"error": "The recipe service is unavailable. Try again in a minute."}), 502
+
+    if recipe is None:
+        return jsonify({"error": "Recipe not found."}), 404
+
+    saved, created = db.save_recipe(recipe)
+    return jsonify(saved), 201 if created else 200
+
+
+@bp.route("/api/saved/<int:saved_id>", methods=["DELETE"])
+def remove_saved(saved_id):
+    if not db.delete_saved(saved_id):
+        return jsonify({"error": "Saved recipe not found."}), 404
+    return "", 204
