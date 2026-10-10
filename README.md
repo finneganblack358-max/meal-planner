@@ -97,4 +97,4 @@ Saved recipes also carry `saved_id`, the database row id.
 
 ## License
 
-Not chosen yet. Add a LICENSE file before publishing.
+MIT. See the LICENSE file.
