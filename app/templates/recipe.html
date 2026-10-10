@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.title }} - Meal Planner{% endblock %}
+
+{% block content %}
+<a class="back" href="{{ url_for('main.index') }}">&larr; Back to recipes</a>
+
+<article class="detail">
+  <h1>{{ recipe.title }}</h1>
+  <p class="meta">{{ [recipe.area, recipe.category]|select|join(", ") }}</p>
+
+  {% if recipe.image %}
+  <img src="{{ recipe.image }}" alt="">
+  {% endif %}
+
+  <h2>Ingredients</h2>
+  <ul>
+    {% for item in recipe.ingredients %}
+    <li>{% if item.measure %}{{ item.measure }} {% endif %}{{ item.name }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Steps</h2>
+  <ol>
+    {% for step in recipe.steps %}
+    <li>{{ step }}</li>
+    {% endfor %}
+  </ol>
+</article>
+{% endblock %}

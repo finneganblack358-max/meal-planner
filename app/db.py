@@ -95,3 +95,9 @@ def delete_saved(saved_id):
     cursor = db.execute("DELETE FROM saved_recipes WHERE id = ?", (saved_id,))
     db.commit()
     return cursor.rowcount == 1
+
+def get_saved(saved_id):
+    row = get_db().execute(
+        "SELECT * FROM saved_recipes WHERE id = ?", (saved_id,)
+    ).fetchone()
+    return row_to_recipe(row) if row else None

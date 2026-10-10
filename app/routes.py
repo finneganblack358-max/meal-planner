@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, abort, current_app, jsonify, render_template, request
 
 from . import db
 from .clients.themealdb import MealDBError, TheMealDBClient
@@ -13,6 +13,14 @@ def get_client():
 @bp.route("/")
 def index():
     return render_template("index.html")
+
+
+@bp.route("/recipes/<int:saved_id>")
+def recipe_detail(saved_id):
+    recipe = db.get_saved(saved_id)
+    if recipe is None:
+        abort(404)
+    return render_template("recipe.html", recipe=recipe)
 
 
 @bp.route("/api/recipes/search")

@@ -148,3 +148,34 @@ button:disabled {
   background: var(--muted);
   cursor: default;
 }
+
+.recipe h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.recipe h2 a:hover { text-decoration: underline; }
+
+.back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--leaf);
+}
+
+.detail { max-width: 40rem; }
+
+.detail img {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  margin: 1rem 0;
+  border-radius: 4px;
+}
+
+.detail h2 {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.detail li { margin-bottom: 0.5rem; }

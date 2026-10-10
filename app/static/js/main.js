@@ -5,7 +5,7 @@ const resultsEl = document.querySelector("#results");
 const savedStatusEl = document.querySelector("#saved-status");
 const savedEl = document.querySelector("#saved-results");
 
-function renderRecipe(recipe, actionLabel, onAction) {
+function renderRecipe(recipe, actionLabel, onAction, href) {
   const card = document.createElement("article");
   card.className = "recipe";
 
@@ -21,7 +21,14 @@ function renderRecipe(recipe, actionLabel, onAction) {
   body.className = "recipe-body";
 
   const title = document.createElement("h2");
-  title.textContent = recipe.title;
+  if (href) {
+    const link = document.createElement("a");
+    link.href = href;
+    link.textContent = recipe.title;
+    title.appendChild(link);
+  } else {
+    title.textContent = recipe.title;
+  }
 
   const origin = document.createElement("p");
   origin.className = "meta";
@@ -84,7 +91,9 @@ async function loadSaved() {
 
     savedStatusEl.textContent = `${data.results.length} saved`;
     data.results.forEach((recipe) =>
-      savedEl.appendChild(renderRecipe(recipe, "Remove", removeRecipe))
+      savedEl.appendChild(
+        renderRecipe(recipe, "Remove", removeRecipe, `/recipes/${recipe.saved_id}`)
+      )
     );
   } catch (error) {
     savedStatusEl.textContent = "Could not load saved recipes.";
