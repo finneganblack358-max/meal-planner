@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly plan - Meal Planner{% endblock %}
+
+{% block content %}
+<h1>Weekly plan</h1>
+
+<nav class="week-nav">
+  <a href="{{ url_for('main.plan', start=prev_start.isoformat()) }}">&larr; Previous week</a>
+  <strong>{{ days[0].strftime("%b %d") }} - {{ days[-1].strftime("%b %d, %Y") }}</strong>
+  <a href="{{ url_for('main.plan', start=next_start.isoformat()) }}">Next week &rarr;</a>
+</nav>
+
+{% if not recipes %}
+<p class="meta">You have no saved recipes yet. <a href="{{ url_for('main.index') }}">Search and save some</a> first.</p>
+{% endif %}
+
+<div class="plan-wrap">
+  <table class="plan">
+    <thead>
+      <tr>
+        <th>Day</th>
+        {% for slot in slots %}
+        <th>{{ slot|capitalize }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for day in days %}
+      <tr{% if day == today %} class="today"{% endif %}>
+        <th scope="row">{{ day.strftime("%a %b %d") }}</th>
+        {% for slot in slots %}
+        {% set meal = meals.get((day.isoformat(), slot)) %}
+        <td>
+          {% if meal %}
+          <a href="{{ url_for('main.recipe_detail', saved_id=meal.saved_id) }}">{{ meal.title }}</a>
+          {% endif %}
+          <form method="post" action="{{ url_for('main.plan_set') }}">
+            <input type="hidden" name="date" value="{{ day.isoformat() }}">
+            <input type="hidden" name="slot" value="{{ slot }}">
+            <select name="saved_id" aria-label="{{ slot|capitalize }} on {{ day.strftime('%A') }}">
+              <option value="">None</option>
+              {% for recipe in recipes %}
+              <option value="{{ recipe.saved_id }}"{% if meal and meal.saved_id == recipe.saved_id %} selected{% endif %}>{{ recipe.title }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">Set</button>
+          </form>
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

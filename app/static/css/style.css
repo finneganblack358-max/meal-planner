@@ -179,3 +179,70 @@ button:disabled {
 }
 
 .detail li { margin-bottom: 0.5rem; }
+
+.site-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+}
+
+.site-nav { display: flex; gap: 1rem; }
+.site-nav a { color: var(--leaf); }
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.week-nav a { color: var(--leaf); }
+
+.plan-wrap { overflow-x: auto; }
+
+.plan {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+}
+
+.plan th,
+.plan td {
+  min-width: 11rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.plan thead th { background: var(--paper); }
+
+.plan th[scope="row"] {
+  min-width: 7rem;
+  white-space: nowrap;
+}
+
+.plan tr.today th,
+.plan tr.today td { background: #eef5ef; }
+
+.plan td a {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.plan form { display: flex; gap: 0.35rem; }
+
+.plan select {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.plan button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+}

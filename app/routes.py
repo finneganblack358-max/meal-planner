@@ -1,4 +1,15 @@
-from flask import Blueprint, abort, current_app, jsonify, render_template, request
+from datetime import date, timedelta
+
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from . import db
 from .clients.themealdb import MealDBError, TheMealDBClient
@@ -8,6 +19,17 @@ bp = Blueprint("main", __name__)
 
 def get_client():
     return TheMealDBClient(api_key=current_app.config["THEMEALDB_API_KEY"])
+
+
+def parse_date(text):
+    try:
+        return date.fromisoformat(text)
+    except (TypeError, ValueError):
+        return None
+
+
+def monday_of(day):
+    return day - timedelta(days=day.weekday())
 
 
 @bp.route("/")
@@ -21,6 +43,41 @@ def recipe_detail(saved_id):
     if recipe is None:
         abort(404)
     return render_template("recipe.html", recipe=recipe)
+
+
+@bp.route("/plan")
+def plan():
+    start = monday_of(parse_date(request.args.get("start")) or date.today())
+    days = [start + timedelta(days=i) for i in range(7)]
+    meals = db.get_plan(days[0].isoformat(), days[-1].isoformat())
+    return render_template(
+        "plan.html",
+        days=days,
+        slots=db.SLOTS,
+        meals=meals,
+        recipes=db.list_saved(),
+        today=date.today(),
+        prev_start=start - timedelta(days=7),
+        next_start=start + timedelta(days=7),
+    )
+
+
+@bp.route("/plan/set", methods=["POST"])
+def plan_set():
+    plan_date = parse_date(request.form.get("date"))
+    slot = request.form.get("slot")
+    if plan_date is None or slot not in db.SLOTS:
+        abort(400)
+
+    saved_id = request.form.get("saved_id", "")
+    if saved_id == "":
+        db.clear_meal(plan_date.isoformat(), slot)
+    else:
+        if not saved_id.isdigit() or db.get_saved(int(saved_id)) is None:
+            abort(400)
+        db.set_meal(plan_date.isoformat(), slot, int(saved_id))
+
+    return redirect(url_for("main.plan", start=monday_of(plan_date).isoformat()))
 
 
 @bp.route("/api/recipes/search")
