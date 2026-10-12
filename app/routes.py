@@ -13,6 +13,7 @@ from flask import (
 
 from . import db
 from .clients.themealdb import MealDBError, TheMealDBClient
+from .shopping import build_shopping_list
 
 bp = Blueprint("main", __name__)
 
@@ -32,6 +33,12 @@ def monday_of(day):
     return day - timedelta(days=day.weekday())
 
 
+def week_from_request():
+    """Return (start, days) for the ?start= week, defaulting to this week."""
+    start = monday_of(parse_date(request.args.get("start")) or date.today())
+    return start, [start + timedelta(days=i) for i in range(7)]
+
+
 @bp.route("/")
 def index():
     return render_template("index.html")
@@ -47,8 +54,7 @@ def recipe_detail(saved_id):
 
 @bp.route("/plan")
 def plan():
-    start = monday_of(parse_date(request.args.get("start")) or date.today())
-    days = [start + timedelta(days=i) for i in range(7)]
+    start, days = week_from_request()
     meals = db.get_plan(days[0].isoformat(), days[-1].isoformat())
     return render_template(
         "plan.html",
@@ -78,6 +84,19 @@ def plan_set():
         db.set_meal(plan_date.isoformat(), slot, int(saved_id))
 
     return redirect(url_for("main.plan", start=monday_of(plan_date).isoformat()))
+
+
+@bp.route("/shopping")
+def shopping_list():
+    start, days = week_from_request()
+    ingredients = db.get_planned_ingredients(days[0].isoformat(), days[-1].isoformat())
+    return render_template(
+        "shopping.html",
+        items=build_shopping_list(ingredients),
+        days=days,
+        prev_start=start - timedelta(days=7),
+        next_start=start + timedelta(days=7),
+    )
 
 
 @bp.route("/api/recipes/search")

@@ -2,7 +2,7 @@
 
 A Python (Flask) web app for finding recipes, planning a week of meals, and generating a shopping list. The front end is plain HTML, CSS and JavaScript.
 
-**Status:** Recipe search (TheMealDB), saved recipes (SQLite), a recipe detail page and a weekly meal plan work. Everything else is on the roadmap below.
+**Status:** Recipe search (TheMealDB), saved recipes (SQLite), a recipe detail page, a weekly meal plan and a weekly shopping list work. Everything else is on the roadmap below.
 
 ## Quick start
 
@@ -14,7 +14,7 @@ cp .env.example .env             # Windows: copy .env.example .env
 python run.py
 ```
 
-Open http://127.0.0.1:5000, search for a recipe and click Save. Saved recipes appear below the search results; click a title to open its detail page. Open the Plan page to assign saved recipes to breakfast, lunch and dinner for each day of the week. Run the tests with `pytest`.
+Open http://127.0.0.1:5000, search for a recipe and click Save. Saved recipes appear below the search results; click a title to open its detail page. Open the Plan page to assign saved recipes to breakfast, lunch and dinner for each day of the week, then open the Shopping list page for that week's combined ingredients. Run the tests with `pytest`.
 
 The SQLite database (`meal_planner.db`) is created automatically on first run.
 
@@ -31,13 +31,15 @@ meal-planner/
 │   ├── __init__.py         App factory (create_app), sets up the database
 │   ├── config.py           Settings loaded from environment variables
 │   ├── db.py               SQLite storage for saved recipes and the meal plan
+│   ├── shopping.py         Merges ingredients and converts units for the shopping list
 │   ├── routes.py           Pages and JSON endpoints
 │   ├── clients/
 │   │   └── themealdb.py    API client + conversion to the internal recipe format
-│   ├── templates/          base.html, index.html, recipe.html, plan.html
+│   ├── templates/          base.html, index.html, recipe.html, plan.html, shopping.html
 │   └── static/             css/style.css, js/main.js
-└── tests/                  conftest.py plus client, route, saved-recipe, detail and plan tests
-                            (API calls are mocked, each test gets its own temporary database)
+└── tests/                  conftest.py plus client, route, saved-recipe, detail, plan
+                            and shopping tests (API calls are mocked, each test gets
+                            its own temporary database)
 ```
 
 ## How it works
@@ -50,6 +52,17 @@ meal-planner/
 6. The page lists saved recipes from `GET /api/saved`, and Remove calls `DELETE /api/saved/<id>`.
 7. Saved recipes link to `/recipes/<id>`, a server-rendered detail page with the ingredients and steps.
 8. The Plan page (`/plan`) shows one week, Monday to Sunday. Choosing a recipe for a slot posts to `/plan/set`, which stores it in the `meal_plan` table. Deleting a saved recipe also removes it from the plan.
+9. The Shopping list page (`/shopping`) gathers the ingredients of every meal planned that week and merges them in `app/shopping.py`.
+
+## Shopping list rules
+
+TheMealDB measures are free text, so the merging is deliberately simple:
+
+- Ingredients are matched by name, ignoring case. "Tomato" and "Tomatoes" are different items.
+- Measures that start with a number are added up: `1 cup` + `8 tbsp` = `1.5 cup`.
+- Teaspoons, tablespoons, cups and millilitres/litres convert between each other, and so do ounces, pounds and grams/kilograms. The result stays in the same system (US or metric) as the first measure seen.
+- Other units (`2 cloves`, `1 large`) only merge with the same unit.
+- Anything else (`to taste`, `Juice of 1 lime`, ranges like `3-4 cloves`) is kept as a note instead of being guessed.
 
 API keys stay on the server in `.env`, which is git-ignored.
 
@@ -61,6 +74,7 @@ API keys stay on the server in `.env`, which is git-ignored.
 | GET | `/recipes/<id>` | Detail page for a saved recipe |
 | GET | `/plan?start=YYYY-MM-DD` | Weekly plan page (defaults to this week) |
 | POST | `/plan/set` | Set or clear a slot; form fields `date`, `slot`, `saved_id` |
+| GET | `/shopping?start=YYYY-MM-DD` | Shopping list for a week (defaults to this week) |
 | GET | `/api/recipes/search?q=...` | Search TheMealDB |
 | GET | `/api/saved` | List saved recipes |
 | POST | `/api/saved` | Save a recipe, body `{"id": "52771"}` |
@@ -93,11 +107,11 @@ Saved recipes also carry `saved_id`, the database row id.
 - [x] SQLite storage for saved recipes
 - [x] Recipe detail page
 - [x] Weekly meal calendar
-- [ ] Shopping list with merged ingredients and unit conversion
+- [x] Shopping list with merged ingredients and unit conversion
 - [ ] USDA nutrition totals per meal and per day
 - [ ] Spoonacular search with diet filters (cache results; the free daily quota is small)
 - [ ] Open Food Facts barcode lookup for a pantry
 
 ## License
 
-MIT. See the LICENSE file.
+Not chosen yet. Add a LICENSE file before publishing.

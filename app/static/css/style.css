@@ -246,3 +246,30 @@ button:disabled {
   padding: 0.3rem 0.6rem;
   font-size: 0.85rem;
 }
+
+.shopping {
+  max-width: 36rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shopping li { border-bottom: 1px solid var(--line); }
+
+.shopping label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.6rem 0.25rem;
+  cursor: pointer;
+}
+
+.shopping .item-qty {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.shopping input:checked ~ span {
+  color: var(--muted);
+  text-decoration: line-through;
+}
