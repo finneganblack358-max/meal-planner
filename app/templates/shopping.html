@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping list - Meal Planner{% endblock %}
+
+{% block content %}
+<h1>Shopping list</h1>
+
+<nav class="week-nav">
+  <a href="{{ url_for('main.shopping_list', start=prev_start.isoformat()) }}">&larr; Previous week</a>
+  <strong>{{ days[0].strftime("%b %d") }} - {{ days[-1].strftime("%b %d, %Y") }}</strong>
+  <a href="{{ url_for('main.shopping_list', start=next_start.isoformat()) }}">Next week &rarr;</a>
+</nav>
+
+<p><a class="back" href="{{ url_for('main.plan', start=days[0].isoformat()) }}">&larr; Back to this week's plan</a></p>
+
+{% if items %}
+<ul class="shopping">
+  {% for item in items %}
+  <li>
+    <label>
+      <input type="checkbox">
+      <span class="item-name">{{ item.name }}</span>
+      {% if item.quantity %}<span class="item-qty">{{ item.quantity }}</span>{% endif %}
+    </label>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="meta">Nothing planned for this week. <a href="{{ url_for('main.plan', start=days[0].isoformat()) }}">Plan some meals</a> first.</p>
+{% endif %}
+{% endblock %}

@@ -11,6 +11,8 @@
   <a href="{{ url_for('main.plan', start=next_start.isoformat()) }}">Next week &rarr;</a>
 </nav>
 
+<p><a class="back" href="{{ url_for('main.shopping_list', start=days[0].isoformat()) }}">Shopping list for this week &rarr;</a></p>
+
 {% if not recipes %}
 <p class="meta">You have no saved recipes yet. <a href="{{ url_for('main.index') }}">Search and save some</a> first.</p>
 {% endif %}

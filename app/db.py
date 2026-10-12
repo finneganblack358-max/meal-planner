@@ -155,3 +155,19 @@ def get_plan(start_date, end_date):
         }
         for row in rows
     }
+    
+def get_planned_ingredients(start_date, end_date):
+    """Return every ingredient of every meal planned in a date range."""
+    rows = get_db().execute(
+        """
+        SELECT saved_recipes.ingredients
+        FROM meal_plan
+        JOIN saved_recipes ON saved_recipes.id = meal_plan.saved_id
+        WHERE meal_plan.plan_date BETWEEN ? AND ?
+        """,
+        (start_date, end_date),
+    ).fetchall()
+    ingredients = []
+    for row in rows:
+        ingredients.extend(json.loads(row["ingredients"]))
+    return ingredients
