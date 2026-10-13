@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrition - Meal Planner{% endblock %}
+
+{% block content %}
+<h1>Nutrition</h1>
+
+<nav class="week-nav">
+  <a href="{{ url_for('main.nutrition_page', start=prev_start.isoformat()) }}">&larr; Previous week</a>
+  <strong>{{ days[0].strftime("%b %d") }} - {{ days[-1].strftime("%b %d, %Y") }}</strong>
+  <a href="{{ url_for('main.nutrition_page', start=next_start.isoformat()) }}">Next week &rarr;</a>
+</nav>
+
+<p><a class="back" href="{{ url_for('main.plan', start=days[0].isoformat()) }}">&larr; Back to this week's plan</a></p>
+
+{% if error %}
+<p class="error" role="alert">{{ error }}</p>
+{% elif week %}
+<div class="plan-wrap">
+  <table class="nutrition">
+    <thead>
+      <tr>
+        <th>Day</th>
+        <th>Meal</th>
+        <th>Recipe</th>
+        <th>Calories</th>
+        <th>Protein</th>
+        <th>Carbs</th>
+        <th>Fat</th>
+        <th>Coverage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for day in days %}
+      {% set entry = week.get(day.isoformat()) %}
+      {% if entry %}
+      {% for meal in entry.meals %}
+      <tr>
+        {% if loop.first %}
+        <th scope="row" rowspan="{{ entry.meals|length + 1 }}">{{ day.strftime("%a %b %d") }}</th>
+        {% endif %}
+        <td>{{ meal.slot|capitalize }}</td>
+        <td>{{ meal.title }}</td>
+        <td>{{ "%.0f"|format(meal.nutrients.calories) }}</td>
+        <td>{{ "%.1f"|format(meal.nutrients.protein) }} g</td>
+        <td>{{ "%.1f"|format(meal.nutrients.carbs) }} g</td>
+        <td>{{ "%.1f"|format(meal.nutrients.fat) }} g</td>
+        <td class="meta">{{ meal.counted }} of {{ meal.total }} ingredients</td>
+      </tr>
+      {% endfor %}
+      <tr class="day-total">
+        <td colspan="2">Day total</td>
+        <td>{{ "%.0f"|format(entry.totals.calories) }}</td>
+        <td>{{ "%.1f"|format(entry.totals.protein) }} g</td>
+        <td>{{ "%.1f"|format(entry.totals.carbs) }} g</td>
+        <td>{{ "%.1f"|format(entry.totals.fat) }} g</td>
+        <td></td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="meta note">
+  Estimates per serving, assuming each recipe makes {{ servings }} servings. Only
+  ingredients measured by weight or volume are counted (volumes are treated as
+  1 g per ml), so real values are usually higher. Data: USDA FoodData Central.
+</p>
+{% else %}
+<p class="meta">Nothing planned for this week. <a href="{{ url_for('main.plan', start=days[0].isoformat()) }}">Plan some meals</a> first.</p>
+{% endif %}
+{% endblock %}

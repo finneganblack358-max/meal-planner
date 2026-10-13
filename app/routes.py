@@ -13,6 +13,8 @@ from flask import (
 
 from . import db
 from .clients.themealdb import MealDBError, TheMealDBClient
+from .clients.usda import USDAClient, USDAError
+from .nutrition import SERVINGS, build_week_nutrition
 from .shopping import build_shopping_list
 
 bp = Blueprint("main", __name__)
@@ -20,6 +22,10 @@ bp = Blueprint("main", __name__)
 
 def get_client():
     return TheMealDBClient(api_key=current_app.config["THEMEALDB_API_KEY"])
+
+
+def get_usda_client():
+    return USDAClient(api_key=current_app.config["USDA_API_KEY"])
 
 
 def parse_date(text):
@@ -98,6 +104,32 @@ def shopping_list():
         next_start=start + timedelta(days=7),
     )
 
+@bp.route("/nutrition")
+def nutrition_page():
+    start, days = week_from_request()
+    meals = db.get_planned_meals(days[0].isoformat(), days[-1].isoformat())
+
+    week, error = {}, None
+    try:
+        week = build_week_nutrition(meals, get_usda_client())
+    except USDAError as exc:
+        current_app.logger.warning("USDA lookup failed: %s", exc)
+        error = (
+            "Could not get data from USDA FoodData Central. The service may be down "
+            "or your API key's request limit may be used up. Anything already looked "
+            "up is saved, so try again in a few minutes."
+        )
+
+    page = render_template(
+        "nutrition.html",
+        days=days,
+        week=week,
+        error=error,
+        servings=SERVINGS,
+        prev_start=start - timedelta(days=7),
+        next_start=start + timedelta(days=7),
+    )
+    return page, (502 if error else 200)
 
 @bp.route("/api/recipes/search")
 def search_recipes():
