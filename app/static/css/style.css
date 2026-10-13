@@ -273,3 +273,45 @@ button:disabled {
   color: var(--muted);
   text-decoration: line-through;
 }
+
+.week-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nutrition {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+}
+
+.nutrition th,
+.nutrition td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.nutrition thead th { background: var(--paper); }
+
+.nutrition th[scope="row"] { white-space: nowrap; }
+
+.nutrition .day-total td {
+  font-weight: 600;
+  background: var(--paper);
+}
+
+.note {
+  max-width: 40rem;
+  margin-top: 1rem;
+}
+
+.error {
+  max-width: 40rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #c0392b;
+  border-radius: 4px;
+  color: #8e2a1f;
+  background: #fbeceb;
+}
