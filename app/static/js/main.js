@@ -1,5 +1,8 @@
 const form = document.querySelector("#search-form");
 const input = document.querySelector("#search-input");
+const sourceEl = document.querySelector("#source-select");
+const dietEl = document.querySelector("#diet-select");
+const allergyEl = document.querySelector("#allergy-select");
 const statusEl = document.querySelector("#status");
 const resultsEl = document.querySelector("#results");
 const savedStatusEl = document.querySelector("#saved-status");
@@ -55,7 +58,7 @@ async function saveRecipe(button, recipe) {
     const response = await fetch("/api/saved", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: recipe.id }),
+      body: JSON.stringify({ id: recipe.id, source: recipe.source }),
     });
     if (!response.ok) throw new Error("save failed");
     button.textContent = "Saved";
@@ -104,8 +107,14 @@ async function search(query) {
   statusEl.textContent = "Searching...";
   resultsEl.replaceChildren();
 
+  const params = new URLSearchParams({ q: query, source: sourceEl.value });
+  if (sourceEl.value === "spoonacular") {
+    if (dietEl.value) params.set("diet", dietEl.value);
+    if (allergyEl.value) params.set("intolerances", allergyEl.value);
+  }
+
   try {
-    const response = await fetch(`/api/recipes/search?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`/api/recipes/search?${params}`);
     const data = await response.json();
 
     if (!response.ok) {
@@ -125,6 +134,16 @@ async function search(query) {
     statusEl.textContent = "Could not reach the server. Check your connection and try again.";
   }
 }
+
+sourceEl.addEventListener("change", () => {
+  const usingSpoonacular = sourceEl.value === "spoonacular";
+  dietEl.disabled = !usingSpoonacular;
+  allergyEl.disabled = !usingSpoonacular;
+  if (!usingSpoonacular) {
+    dietEl.value = "";
+    allergyEl.value = "";
+  }
+});
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();

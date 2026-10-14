@@ -6,6 +6,29 @@
   <form id="search-form" role="search">
     <label for="search-input" class="visually-hidden">Search recipes</label>
     <input id="search-input" type="search" placeholder="Try chicken, pasta, or arrabiata" autocomplete="off" required>
+
+    <label for="source-select" class="visually-hidden">Recipe source</label>
+    <select id="source-select">
+      <option value="themealdb">TheMealDB</option>
+      <option value="spoonacular">Spoonacular</option>
+    </select>
+
+    <label for="diet-select" class="visually-hidden">Diet (Spoonacular only)</label>
+    <select id="diet-select" disabled>
+      <option value="">Any diet</option>
+      {% for diet in diets %}
+      <option value="{{ diet }}">{{ diet|capitalize }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="allergy-select" class="visually-hidden">Allergy (Spoonacular only)</label>
+    <select id="allergy-select" disabled>
+      <option value="">No allergy filter</option>
+      {% for item in intolerances %}
+      <option value="{{ item }}">{{ item }}-free</option>
+      {% endfor %}
+    </select>
+
     <button type="submit">Search</button>
   </form>
   <p id="status" role="status"></p>

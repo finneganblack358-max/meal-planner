@@ -36,6 +36,19 @@ CREATE TABLE IF NOT EXISTS nutrition_cache (
     carbs REAL,
     fat REAL
 );
+
+CREATE TABLE IF NOT EXISTS search_cache (
+    cache_key TEXT PRIMARY KEY,
+    recipes TEXT NOT NULL,
+    fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS recipe_cache (
+    source TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    recipe TEXT NOT NULL,
+    PRIMARY KEY (source, source_id)
+);
 """
 
 
@@ -245,3 +258,37 @@ def get_planned_meals(start_date, end_date):
     ]
     meals.sort(key=lambda meal: (meal["plan_date"], SLOTS.index(meal["slot"])))
     return meals
+
+def get_cached_search(cache_key, max_age_hours=24):
+    """Return cached search results if they are fresh enough, else None."""
+    row = get_db().execute(
+        """
+        SELECT recipes FROM search_cache
+        WHERE cache_key = ? AND fetched_at >= datetime('now', ?)
+        """,
+        (cache_key, f"-{max_age_hours} hours"),
+    ).fetchone()
+    return json.loads(row["recipes"]) if row else None
+
+
+def save_search(cache_key, recipes):
+    """Cache a search, and each recipe in it so Save needs no extra API call."""
+    db = get_db()
+    db.execute(
+        "INSERT OR REPLACE INTO search_cache (cache_key, recipes) VALUES (?, ?)",
+        (cache_key, json.dumps(recipes)),
+    )
+    for recipe in recipes:
+        db.execute(
+            "INSERT OR REPLACE INTO recipe_cache (source, source_id, recipe) VALUES (?, ?, ?)",
+            (recipe["source"], recipe["id"], json.dumps(recipe)),
+        )
+    db.commit()
+
+
+def get_cached_recipe(source, source_id):
+    row = get_db().execute(
+        "SELECT recipe FROM recipe_cache WHERE source = ? AND source_id = ?",
+        (source, source_id),
+    ).fetchone()
+    return json.loads(row["recipe"]) if row else None
