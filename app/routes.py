@@ -1,3 +1,4 @@
+import re
 from datetime import date, timedelta
 
 from flask import (
@@ -12,6 +13,7 @@ from flask import (
 )
 
 from . import db
+from .clients.openfoodfacts import OpenFoodFactsClient, OpenFoodFactsError
 from .clients.spoonacular import DIETS, INTOLERANCES, SpoonacularClient, SpoonacularError
 from .clients.themealdb import MealDBError, TheMealDBClient
 from .clients.usda import USDAClient, USDAError
@@ -19,6 +21,9 @@ from .nutrition import SERVINGS, build_week_nutrition
 from .shopping import build_shopping_list
 
 bp = Blueprint("main", __name__)
+
+# EAN-8, UPC-A (12), EAN-13 and GTIN-14 barcodes
+BARCODE_RE = re.compile(r"[0-9]{8}|[0-9]{12,14}")
 
 
 def get_client():
@@ -31,6 +36,10 @@ def get_usda_client():
 
 def get_spoonacular_client():
     return SpoonacularClient(api_key=current_app.config["SPOONACULAR_API_KEY"])
+
+
+def get_openfoodfacts_client():
+    return OpenFoodFactsClient(user_agent=current_app.config["OPENFOODFACTS_USER_AGENT"])
 
 
 def parse_date(text):
@@ -136,6 +145,50 @@ def nutrition_page():
         next_start=start + timedelta(days=7),
     )
     return page, (502 if error else 200)
+
+
+@bp.route("/pantry")
+def pantry_page():
+    return render_template("pantry.html", items=db.list_pantry(), error=None, barcode="")
+
+
+def pantry_error(message, barcode, status):
+    page = render_template(
+        "pantry.html", items=db.list_pantry(), error=message, barcode=barcode
+    )
+    return page, status
+
+
+@bp.route("/pantry/add", methods=["POST"])
+def pantry_add():
+    barcode = "".join(request.form.get("barcode", "").split())
+    if not BARCODE_RE.fullmatch(barcode):
+        return pantry_error(
+            "Enter a barcode with 8, 12, 13 or 14 digits (numbers only).", barcode, 400
+        )
+
+    try:
+        product = get_openfoodfacts_client().get_product(barcode)
+    except OpenFoodFactsError as exc:
+        current_app.logger.warning("Open Food Facts lookup failed: %s", exc)
+        return pantry_error(
+            "Could not reach Open Food Facts. Try again in a minute.", barcode, 502
+        )
+
+    if product is None:
+        return pantry_error(
+            "No product found for that barcode in Open Food Facts.", barcode, 404
+        )
+
+    db.add_pantry_item(product)
+    return redirect(url_for("main.pantry_page"))
+
+
+@bp.route("/pantry/<int:item_id>/remove", methods=["POST"])
+def pantry_remove(item_id):
+    if not db.delete_pantry_item(item_id):
+        abort(404)
+    return redirect(url_for("main.pantry_page"))
 
 
 def search_spoonacular(query, diet, intolerances):

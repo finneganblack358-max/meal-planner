@@ -333,3 +333,22 @@ input[type="search"] { min-width: 12rem; }
 }
 
 #search-form select:disabled { color: var(--muted); }
+
+.pantry-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: 40rem;
+  margin-bottom: 1rem;
+}
+
+.pantry-form input[type="text"] {
+  flex: 1;
+  min-width: 12rem;
+  padding: 0.65rem 0.8rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}

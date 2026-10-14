@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Pantry - Meal Planner{% endblock %}
+
+{% block content %}
+<h1>Pantry</h1>
+
+<form class="pantry-form" method="post" action="{{ url_for('main.pantry_add') }}">
+  <label for="barcode-input" class="visually-hidden">Barcode</label>
+  <input id="barcode-input" name="barcode" type="text" inputmode="numeric"
+         placeholder="Type or paste a barcode, for example 3017624010701"
+         autocomplete="off" value="{{ barcode }}" required>
+  <button type="submit">Add to pantry</button>
+</form>
+
+{% if error %}
+<p class="error" role="alert">{{ error }}</p>
+{% endif %}
+
+{% if items %}
+<div class="results">
+  {% for item in items %}
+  <article class="recipe">
+    {% if item.image %}
+    <img src="{{ item.image }}" alt="">
+    {% endif %}
+    <div class="recipe-body">
+      <h2>{{ item.name }}</h2>
+      <p class="meta">{{ [item.brands, item.quantity]|select|join(", ") }}</p>
+      <p class="meta">Barcode {{ item.barcode }}{% if item.copies > 1 %} &middot; {{ item.copies }} in pantry{% endif %}</p>
+      <form method="post" action="{{ url_for('main.pantry_remove', item_id=item.id) }}">
+        <button type="submit" class="recipe-action">Remove</button>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<p class="meta">Your pantry is empty. Add a product by typing its barcode.</p>
+{% endif %}
+
+<p class="meta note">
+  Product data from Open Food Facts (openfoodfacts.org), available under the
+  Open Database License.
+</p>
+{% endblock %}

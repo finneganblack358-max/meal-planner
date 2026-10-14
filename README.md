@@ -1,8 +1,8 @@
 # Meal Planner
 
-A Python (Flask) web app for finding recipes, planning a week of meals, and generating a shopping list. The front end is plain HTML, CSS and JavaScript.
+A Python (Flask) web app for finding recipes, planning a week of meals, generating a shopping list and keeping a pantry. The front end is plain HTML, CSS and JavaScript.
 
-**Status:** Recipe search (TheMealDB, and Spoonacular with diet and allergy filters), saved recipes (SQLite), a recipe detail page, a weekly meal plan, a weekly shopping list and USDA nutrition estimates work. Only the pantry feature is left on the roadmap below.
+**Status:** Recipe search (TheMealDB, and Spoonacular with diet and allergy filters), saved recipes (SQLite), a recipe detail page, a weekly meal plan, a weekly shopping list, USDA nutrition estimates and an Open Food Facts barcode pantry work. Only polish and release are left on the roadmap below.
 
 ## Quick start
 
@@ -14,16 +14,17 @@ cp .env.example .env             # Windows: copy .env.example .env
 python run.py
 ```
 
-Open http://127.0.0.1:5000, search for a recipe and click Save. Choose Spoonacular as the source to filter by diet or allergy. Saved recipes appear below the search results; click a title to open its detail page. Open the Plan page to assign saved recipes to breakfast, lunch and dinner for each day of the week, then open the Shopping list or Nutrition page for that week. Run the tests with `pytest`.
+Open http://127.0.0.1:5000, search for a recipe and click Save. Choose Spoonacular as the source to filter by diet or allergy. Saved recipes appear below the search results; click a title to open its detail page. Open the Plan page to assign saved recipes to breakfast, lunch and dinner for each day of the week, then open the Shopping list or Nutrition page for that week. Open the Pantry page to add products by barcode. Run the tests with `pytest`.
 
 The SQLite database (`meal_planner.db`) is created automatically on first run.
 
-### API keys
+### API keys and settings
 
 Set these in `.env` and restart the app after changing them.
 
 - **USDA** (Nutrition page): the shared `DEMO_KEY` in `.env.example` is limited to roughly 10 to 30 requests per hour, so get a free personal key (1,000 requests per hour) at https://fdc.nal.usda.gov/api-key-signup and set `USDA_API_KEY`.
 - **Spoonacular** (Spoonacular search): get a free key at https://spoonacular.com/food-api and set `SPOONACULAR_API_KEY`. Without it, TheMealDB search still works and Spoonacular search shows a setup message.
+- **Open Food Facts** (Pantry): no key is needed, but it asks every app to send a User-Agent with a contact. Set `OPENFOODFACTS_USER_AGENT` to something like `MealPlanner/1.0 (your-email@example.com)`.
 
 ## Project structure
 
@@ -38,20 +39,22 @@ meal-planner/
 ├── app/
 │   ├── __init__.py         App factory (create_app), sets up the database
 │   ├── config.py           Settings loaded from environment variables
-│   ├── db.py               SQLite storage: saved recipes, meal plan, caches
+│   ├── db.py               SQLite storage: saved recipes, meal plan, pantry, caches
 │   ├── shopping.py         Merges ingredients and converts units for the shopping list
 │   ├── nutrition.py        Estimates calories and macros for planned meals
 │   ├── routes.py           Pages and JSON endpoints
 │   ├── clients/
-│   │   ├── themealdb.py    TheMealDB client + conversion to the internal recipe format
-│   │   ├── spoonacular.py  Spoonacular client (search with diet and allergy filters)
-│   │   └── usda.py         USDA FoodData Central client (nutrients per 100 g)
+│   │   ├── themealdb.py       TheMealDB client + conversion to the internal recipe format
+│   │   ├── spoonacular.py     Spoonacular client (search with diet and allergy filters)
+│   │   ├── usda.py            USDA FoodData Central client (nutrients per 100 g)
+│   │   └── openfoodfacts.py   Open Food Facts client (product by barcode)
 │   ├── templates/          base.html, index.html, recipe.html, plan.html,
-│   │                       shopping.html, nutrition.html
+│   │                       shopping.html, nutrition.html, pantry.html
 │   └── static/             css/style.css, js/main.js
 └── tests/                  conftest.py plus client, route, saved-recipe, detail, plan,
-                            shopping, USDA, nutrition and Spoonacular tests (API calls
-                            are mocked, each test gets its own temporary database)
+                            shopping, USDA, nutrition, Spoonacular and Open Food Facts
+                            tests (API calls are mocked, each test gets its own
+                            temporary database)
 ```
 
 ## How it works
@@ -66,6 +69,14 @@ meal-planner/
 8. The Plan page (`/plan`) shows one week, Monday to Sunday. Choosing a recipe for a slot posts to `/plan/set`, which stores it in the `meal_plan` table. Deleting a saved recipe also removes it from the plan.
 9. The Shopping list page (`/shopping`) gathers the ingredients of every meal planned that week and merges them in `app/shopping.py`.
 10. The Nutrition page (`/nutrition`) looks up each ingredient in USDA FoodData Central, caches the result in SQLite, and totals calories, protein, carbs and fat per meal and per day.
+11. The Pantry page (`/pantry`) takes a typed barcode, looks the product up in Open Food Facts and stores it in the `pantry` table. Adding the same barcode again increases its count.
+
+## Pantry rules
+
+- Barcodes must be 8, 12, 13 or 14 digits (EAN-8, UPC-A, EAN-13, GTIN-14). Spaces are ignored.
+- Open Food Facts is a crowd-sourced database, so some products are missing or have incomplete names. A barcode it doesn't know shows a "No product found" message.
+- Product data comes from Open Food Facts (openfoodfacts.org) and is available under the Open Database License.
+- The pantry is a separate list. It is not yet used to adjust the shopping list.
 
 ## Spoonacular rules
 
@@ -109,6 +120,9 @@ API keys stay on the server in `.env`, which is git-ignored.
 | POST | `/plan/set` | Set or clear a slot; form fields `date`, `slot`, `saved_id` |
 | GET | `/shopping?start=YYYY-MM-DD` | Shopping list for a week (defaults to this week) |
 | GET | `/nutrition?start=YYYY-MM-DD` | Nutrition estimates for a week (defaults to this week) |
+| GET | `/pantry` | Pantry page |
+| POST | `/pantry/add` | Look up a barcode and add it to the pantry; form field `barcode` |
+| POST | `/pantry/<id>/remove` | Remove a pantry item |
 | GET | `/api/recipes/search?q=...&source=...&diet=...&intolerances=...` | Search; `source` is `themealdb` (default) or `spoonacular`; `diet` and `intolerances` (for example `Dairy,Egg`) apply to Spoonacular |
 | GET | `/api/saved` | List saved recipes |
 | POST | `/api/saved` | Save a recipe, body `{"id": "52771", "source": "themealdb"}` |
@@ -133,7 +147,7 @@ Saved recipes also carry `saved_id`, the database row id.
 | TheMealDB | Test key `1` | Recipe search and browsing | In use |
 | USDA FoodData Central | https://fdc.nal.usda.gov/api-key-signup | Nutrition per ingredient | In use |
 | Spoonacular | https://spoonacular.com/food-api | Recipe search with diet and allergy filters | In use |
-| Open Food Facts | None (send a User-Agent) | Barcode and pantry lookups | Planned |
+| Open Food Facts | None (send a User-Agent) | Barcode and pantry lookups | In use |
 
 ## Roadmap
 
@@ -144,7 +158,8 @@ Saved recipes also carry `saved_id`, the database row id.
 - [x] Shopping list with merged ingredients and unit conversion
 - [x] USDA nutrition totals per meal and per day
 - [x] Spoonacular search with diet and allergy filters (cached; the free daily quota is small)
-- [ ] Open Food Facts barcode lookup for a pantry
+- [x] Open Food Facts barcode lookup for a pantry
+- [ ] Polish and release
 
 ## License
 

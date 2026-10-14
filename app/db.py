@@ -49,6 +49,17 @@ CREATE TABLE IF NOT EXISTS recipe_cache (
     recipe TEXT NOT NULL,
     PRIMARY KEY (source, source_id)
 );
+
+CREATE TABLE IF NOT EXISTS pantry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    barcode TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    brands TEXT,
+    quantity TEXT,
+    image TEXT,
+    copies INTEGER NOT NULL DEFAULT 1,
+    added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -177,7 +188,8 @@ def get_plan(start_date, end_date):
         }
         for row in rows
     }
-    
+
+
 def get_planned_ingredients(start_date, end_date):
     """Return every ingredient of every meal planned in a date range."""
     rows = get_db().execute(
@@ -193,6 +205,7 @@ def get_planned_ingredients(start_date, end_date):
     for row in rows:
         ingredients.extend(json.loads(row["ingredients"]))
     return ingredients
+
 
 def get_nutrition(name):
     """Return None if never looked up, else {"values": {...} or None}."""
@@ -259,6 +272,7 @@ def get_planned_meals(start_date, end_date):
     meals.sort(key=lambda meal: (meal["plan_date"], SLOTS.index(meal["slot"])))
     return meals
 
+
 def get_cached_search(cache_key, max_age_hours=24):
     """Return cached search results if they are fresh enough, else None."""
     row = get_db().execute(
@@ -292,3 +306,53 @@ def get_cached_recipe(source, source_id):
         (source, source_id),
     ).fetchone()
     return json.loads(row["recipe"]) if row else None
+
+
+def row_to_pantry_item(row):
+    return {
+        "id": row["id"],
+        "barcode": row["barcode"],
+        "name": row["name"],
+        "brands": row["brands"],
+        "quantity": row["quantity"],
+        "image": row["image"],
+        "copies": row["copies"],
+    }
+
+
+def add_pantry_item(product):
+    """Add a product to the pantry, or one more copy if it is already there."""
+    db = get_db()
+    db.execute(
+        """
+        INSERT INTO pantry (barcode, name, brands, quantity, image)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT (barcode) DO UPDATE SET copies = copies + 1
+        """,
+        (
+            product["barcode"],
+            product["name"],
+            product["brands"],
+            product["quantity"],
+            product["image"],
+        ),
+    )
+    db.commit()
+    row = db.execute(
+        "SELECT * FROM pantry WHERE barcode = ?", (product["barcode"],)
+    ).fetchone()
+    return row_to_pantry_item(row)
+
+
+def list_pantry():
+    rows = get_db().execute(
+        "SELECT * FROM pantry ORDER BY name COLLATE NOCASE, id"
+    ).fetchall()
+    return [row_to_pantry_item(row) for row in rows]
+
+
+def delete_pantry_item(item_id):
+    db = get_db()
+    cursor = db.execute("DELETE FROM pantry WHERE id = ?", (item_id,))
+    db.commit()
+    return cursor.rowcount == 1

@@ -12,4 +12,7 @@ class Config:
     THEMEALDB_API_KEY = os.getenv("THEMEALDB_API_KEY", "1")
     SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY", "")
     USDA_API_KEY = os.getenv("USDA_API_KEY", "DEMO_KEY")
+    OPENFOODFACTS_USER_AGENT = os.getenv(
+        "OPENFOODFACTS_USER_AGENT", "MealPlanner/1.0 (personal project)"
+    )
     DATABASE = os.path.join(BASE_DIR, "meal_planner.db")
