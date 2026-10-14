@@ -315,3 +315,21 @@ button:disabled {
   color: #8e2a1f;
   background: #fbeceb;
 }
+
+#search-form {
+  max-width: 48rem;
+  flex-wrap: wrap;
+}
+
+input[type="search"] { min-width: 12rem; }
+
+#search-form select {
+  padding: 0.65rem 0.5rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+#search-form select:disabled { color: var(--muted); }

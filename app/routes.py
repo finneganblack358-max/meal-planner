@@ -12,6 +12,7 @@ from flask import (
 )
 
 from . import db
+from .clients.spoonacular import DIETS, INTOLERANCES, SpoonacularClient, SpoonacularError
 from .clients.themealdb import MealDBError, TheMealDBClient
 from .clients.usda import USDAClient, USDAError
 from .nutrition import SERVINGS, build_week_nutrition
@@ -26,6 +27,10 @@ def get_client():
 
 def get_usda_client():
     return USDAClient(api_key=current_app.config["USDA_API_KEY"])
+
+
+def get_spoonacular_client():
+    return SpoonacularClient(api_key=current_app.config["SPOONACULAR_API_KEY"])
 
 
 def parse_date(text):
@@ -47,7 +52,7 @@ def week_from_request():
 
 @bp.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", diets=DIETS, intolerances=INTOLERANCES)
 
 
 @bp.route("/recipes/<int:saved_id>")
@@ -104,6 +109,7 @@ def shopping_list():
         next_start=start + timedelta(days=7),
     )
 
+
 @bp.route("/nutrition")
 def nutrition_page():
     start, days = week_from_request()
@@ -131,11 +137,62 @@ def nutrition_page():
     )
     return page, (502 if error else 200)
 
+
+def search_spoonacular(query, diet, intolerances):
+    if diet and diet not in DIETS:
+        return jsonify({"error": "Unknown diet filter."}), 400
+
+    selected = [item.strip() for item in intolerances.split(",") if item.strip()]
+    if any(item not in INTOLERANCES for item in selected):
+        return jsonify({"error": "Unknown allergy filter."}), 400
+    intolerances = ",".join(sorted(selected))
+
+    if not current_app.config["SPOONACULAR_API_KEY"]:
+        return jsonify(
+            {
+                "error": "Spoonacular isn't set up. Add SPOONACULAR_API_KEY to your "
+                ".env file and restart the app."
+            }
+        ), 503
+
+    cache_key = f"{query.lower()}|{diet}|{intolerances}"
+    recipes = db.get_cached_search(cache_key)
+    if recipes is None:
+        try:
+            recipes = get_spoonacular_client().search(query, diet, intolerances)
+        except SpoonacularError as exc:
+            current_app.logger.warning("Spoonacular lookup failed: %s", exc)
+            if exc.status == 402:
+                message = (
+                    "Spoonacular's daily limit is used up. Try again tomorrow, "
+                    "or search TheMealDB instead."
+                )
+            else:
+                message = (
+                    "Could not get results from Spoonacular. Check your API key "
+                    "and connection, then try again."
+                )
+            return jsonify({"error": message}), 502
+        db.save_search(cache_key, recipes)
+
+    return jsonify({"results": recipes})
+
+
 @bp.route("/api/recipes/search")
 def search_recipes():
     query = request.args.get("q", "").strip()
     if not query:
         return jsonify({"error": "Enter a search term, for example ?q=chicken."}), 400
+
+    source = request.args.get("source", "themealdb")
+    if source == "spoonacular":
+        return search_spoonacular(
+            query,
+            request.args.get("diet", "").strip(),
+            request.args.get("intolerances", ""),
+        )
+    if source != "themealdb":
+        return jsonify({"error": "Unknown recipe source."}), 400
 
     try:
         recipes = get_client().search(query)
@@ -154,16 +211,23 @@ def list_saved():
 def add_saved():
     data = request.get_json(silent=True) or {}
     meal_id = str(data.get("id", "")).strip()
+    source = data.get("source") or "themealdb"
     if not meal_id:
         return jsonify({"error": "Send the recipe id, for example {\"id\": \"52771\"}."}), 400
 
-    try:
-        recipe = get_client().get_by_id(meal_id)
-    except MealDBError:
-        return jsonify({"error": "The recipe service is unavailable. Try again in a minute."}), 502
+    if source == "spoonacular":
+        # Search results are cached, so saving costs no API quota.
+        recipe = db.get_cached_recipe("spoonacular", meal_id)
+    elif source == "themealdb":
+        try:
+            recipe = get_client().get_by_id(meal_id)
+        except MealDBError:
+            return jsonify({"error": "The recipe service is unavailable. Try again in a minute."}), 502
+    else:
+        return jsonify({"error": "Unknown recipe source."}), 400
 
     if recipe is None:
-        return jsonify({"error": "Recipe not found."}), 404
+        return jsonify({"error": "Recipe not found. Search for it again first."}), 404
 
     saved, created = db.save_recipe(recipe)
     return jsonify(saved), 201 if created else 200
