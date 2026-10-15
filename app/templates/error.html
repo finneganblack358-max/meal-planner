@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Meal Planner{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p>{{ message }}</p>
+<p><a class="back" href="{{ url_for('main.index') }}">&larr; Back to recipes</a></p>
+{% endblock %}
