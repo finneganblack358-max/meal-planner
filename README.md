@@ -2,7 +2,7 @@
 
 A Python (Flask) web app for finding recipes, planning a week of meals, generating a shopping list and keeping a pantry. The front end is plain HTML, CSS and JavaScript.
 
-**Status:** Recipe search (TheMealDB, and Spoonacular with diet and allergy filters), saved recipes (SQLite), a recipe detail page, a weekly meal plan, a weekly shopping list, USDA nutrition estimates and an Open Food Facts barcode pantry work. Only polish and release are left on the roadmap below.
+**Version 1.0.0.** Recipe search (TheMealDB, and Spoonacular with diet and allergy filters), saved recipes (SQLite), a recipe detail page, a weekly meal plan, a weekly shopping list, USDA nutrition estimates and an Open Food Facts barcode pantry all work. See the [changelog](CHANGELOG.md) for what changed.
 
 ## Quick start
 
@@ -14,7 +14,7 @@ cp .env.example .env             # Windows: copy .env.example .env
 python run.py
 ```
 
-Open http://127.0.0.1:5000, search for a recipe and click Save. Choose Spoonacular as the source to filter by diet or allergy. Saved recipes appear below the search results; click a title to open its detail page. Open the Plan page to assign saved recipes to breakfast, lunch and dinner for each day of the week, then open the Shopping list or Nutrition page for that week. Open the Pantry page to add products by barcode. Run the tests with `pytest`.
+Open http://127.0.0.1:5000, search for a recipe and click Save. Choose Spoonacular as the source to filter by diet or allergy. Saved recipes appear below the search results; click a title to open its detail page. Open the Plan page to assign saved recipes to breakfast, lunch and dinner for each day of the week, then open the Shopping list or Nutrition page for that week. Open the Pantry page to add products by barcode.
 
 The SQLite database (`meal_planner.db`) is created automatically on first run.
 
@@ -25,19 +25,77 @@ Set these in `.env` and restart the app after changing them.
 - **USDA** (Nutrition page): the shared `DEMO_KEY` in `.env.example` is limited to roughly 10 to 30 requests per hour, so get a free personal key (1,000 requests per hour) at https://fdc.nal.usda.gov/api-key-signup and set `USDA_API_KEY`.
 - **Spoonacular** (Spoonacular search): get a free key at https://spoonacular.com/food-api and set `SPOONACULAR_API_KEY`. Without it, TheMealDB search still works and Spoonacular search shows a setup message.
 - **Open Food Facts** (Pantry): no key is needed, but it asks every app to send a User-Agent with a contact. Set `OPENFOODFACTS_USER_AGENT` to something like `MealPlanner/1.0 (your-email@example.com)`.
+- **Debug mode**: set `FLASK_DEBUG=1` for development with `run.py` (auto-reload and the debugger). It is off by default, and must stay off on any server other people can reach.
+- **Publishing**: `APP_PASSWORD`, `BEHIND_PROXY` and `DATABASE_PATH` are described below.
+
+## Development
+
+Run the tests with:
+
+```bash
+pytest
+```
+
+Every external API is mocked and each test uses its own temporary database, so no keys or internet connection are needed. A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the same tests on every push and pull request.
+
+`python run.py` uses Flask's development server, which is fine for local use but must not be exposed to the internet.
+
+## Publishing with a Cloudflare Tunnel
+
+A [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/) lets you reach the app running on your own computer from anywhere, without opening any ports. The app only listens on `127.0.0.1`, and `cloudflared` carries traffic from Cloudflare to it.
+
+**Before you publish**, set these in `.env`:
+
+```
+APP_PASSWORD=a-long-password-only-you-know
+BEHIND_PROXY=1
+# Optional, for example to keep the database out of a OneDrive folder:
+# DATABASE_PATH=C:/meal-planner-data/meal_planner.db
+```
+
+- `APP_PASSWORD` protects the whole site with a browser login prompt. Any username works. Without a password, anyone who finds the URL could change your data and spend your API quotas.
+- `BEHIND_PROXY=1` makes the app trust the forwarded headers Cloudflare adds. Leave it at `0` when not using a tunnel.
+- Never publish with `run.py`. Use `serve.py`, which runs the Waitress server.
+
+**Then run it:**
+
+```bash
+pip install -r requirements.txt
+python serve.py
+```
+
+The app is now on http://127.0.0.1:8080 (change the port with `PORT` in `.env`). Install `cloudflared` (`winget install --id Cloudflare.cloudflared` on Windows, then open a new terminal so it is on your path) and either:
+
+- **Quick tunnel** (for testing, no account needed): `cloudflared tunnel --url http://127.0.0.1:8080` prints a random `https://...trycloudflare.com` address that works until you press Ctrl+C. A new address is generated each time.
+- **Named tunnel** (a permanent address on your own domain): in the Cloudflare dashboard go to Networking > Tunnels, create a tunnel, run the install command it shows on your computer, then add a published application route that points your hostname to `http://127.0.0.1:8080`.
+
+Use `127.0.0.1`, not `localhost`. On Windows `localhost` can resolve to the IPv6 address `::1`, which the app is not listening on.
+
+The site is only reachable while your computer is on and both `serve.py` and `cloudflared` are running. For stronger protection you can also put Cloudflare Access (an email login) in front of the hostname.
+
+Keep `.env` private. It holds your API keys and the password. The tunnel token is a secret too. If any of them leak, replace them.
+
+### Troubleshooting
+
+- **502 Bad Gateway from Cloudflare**: the tunnel is up but cannot reach the app. Check that `python serve.py` is running, that `curl -I http://127.0.0.1:8080` answers (a `401` means the app is up and asking for the password), and that the tunnel points to `http://127.0.0.1:8080` rather than `localhost`.
+- **`cloudflared: command not found`**: a terminal opened before the install does not see it. Close and reopen that program, or use a command prompt opened after installing.
+- **A login prompt every time**: the browser asks for the password again after it is closed. That is normal for this kind of login.
 
 ## Project structure
 
 ```
 meal-planner/
-├── run.py                  Entry point
+├── run.py                  Development server (debug optional)
+├── serve.py                Production server (Waitress), used with a tunnel
 ├── LICENSE                 MIT license
+├── CHANGELOG.md            Release notes
 ├── requirements.txt        Runtime dependencies
 ├── requirements-dev.txt    Adds pytest
-├── .env.example            Template for API keys (copy to .env)
+├── .env.example            Template for API keys and settings (copy to .env)
 ├── meal_planner.db         Created on first run (git-ignored)
+├── .github/workflows/      tests.yml runs pytest on GitHub
 ├── app/
-│   ├── __init__.py         App factory (create_app), sets up the database
+│   ├── __init__.py         App factory (create_app), password, proxy setup, error pages
 │   ├── config.py           Settings loaded from environment variables
 │   ├── db.py               SQLite storage: saved recipes, meal plan, pantry, caches
 │   ├── shopping.py         Merges ingredients and converts units for the shopping list
@@ -49,12 +107,11 @@ meal-planner/
 │   │   ├── usda.py            USDA FoodData Central client (nutrients per 100 g)
 │   │   └── openfoodfacts.py   Open Food Facts client (product by barcode)
 │   ├── templates/          base.html, index.html, recipe.html, plan.html,
-│   │                       shopping.html, nutrition.html, pantry.html
+│   │                       shopping.html, nutrition.html, pantry.html, error.html
 │   └── static/             css/style.css, js/main.js
 └── tests/                  conftest.py plus client, route, saved-recipe, detail, plan,
-                            shopping, USDA, nutrition, Spoonacular and Open Food Facts
-                            tests (API calls are mocked, each test gets its own
-                            temporary database)
+                            shopping, USDA, nutrition, Spoonacular, Open Food Facts,
+                            config, page and deployment tests
 ```
 
 ## How it works
@@ -76,7 +133,6 @@ meal-planner/
 - Barcodes must be 8, 12, 13 or 14 digits (EAN-8, UPC-A, EAN-13, GTIN-14). Spaces are ignored.
 - Open Food Facts is a crowd-sourced database, so some products are missing or have incomplete names. A barcode it doesn't know shows a "No product found" message.
 - Product data comes from Open Food Facts (openfoodfacts.org) and is available under the Open Database License.
-- The pantry is a separate list. It is not yet used to adjust the shopping list.
 
 ## Spoonacular rules
 
@@ -109,6 +165,14 @@ The numbers are estimates:
 - Every lookup is cached in the `nutrition_cache` table, so an ingredient is only requested once.
 
 API keys stay on the server in `.env`, which is git-ignored.
+
+## Known limitations
+
+- It is a single-user app with one shared password (or none), meant to run on your own computer. There are no separate accounts.
+- The pantry is a separate list. It isn't used to adjust the shopping list.
+- Shopping list merging and nutrition totals depend on free-text measures, so treat them as helpful estimates.
+- Camera barcode scanning isn't supported. Barcodes are typed or pasted.
+- Check each data provider's terms (especially Spoonacular's free plan) before showing their data to other people.
 
 ## Endpoints
 
@@ -159,7 +223,7 @@ Saved recipes also carry `saved_id`, the database row id.
 - [x] USDA nutrition totals per meal and per day
 - [x] Spoonacular search with diet and allergy filters (cached; the free daily quota is small)
 - [x] Open Food Facts barcode lookup for a pantry
-- [ ] Polish and release
+- [x] Polish and release (1.0.0)
 
 ## License
 

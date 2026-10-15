@@ -1,6 +1,3 @@
-import pytest
-
-from app import create_app
 from app import routes
 from app.clients.themealdb import MealDBError
 
@@ -13,13 +10,6 @@ class FakeClient:
 class BrokenClient:
     def search(self, query):
         raise MealDBError("boom")
-
-
-@pytest.fixture
-def client():
-    app = create_app()
-    app.config["TESTING"] = True
-    return app.test_client()
 
 
 def test_index_page_loads(client):

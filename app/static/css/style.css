@@ -182,17 +182,24 @@ button:disabled {
 
 .site-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 1.5rem;
+  gap: 0.5rem 1.5rem;
 }
 
-.site-nav { display: flex; gap: 1rem; }
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
 .site-nav a { color: var(--leaf); }
 
 .week-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.5rem 1.5rem;
   margin-bottom: 1rem;
 }
 
@@ -276,7 +283,8 @@ button:disabled {
 
 .week-links {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
 }
 
 .nutrition {
@@ -352,3 +360,20 @@ input[type="search"] { min-width: 12rem; }
   border: 1px solid var(--line);
   border-radius: 4px;
 }
+
+.site-nav a[aria-current="page"] {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.site-footer {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.site-footer p { margin: 0 0 0.25rem; }
